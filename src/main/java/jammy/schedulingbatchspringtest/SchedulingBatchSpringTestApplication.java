@@ -1,13 +1,13 @@
-package jammy.schedulingspringtest;
+package jammy.schedulingbatchspringtest;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class SchedulingSpringTestApplication {
+public class SchedulingBatchSpringTestApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(SchedulingSpringTestApplication.class, args);
+        SpringApplication.run(SchedulingBatchSpringTestApplication.class, args);
     }
 
 }
