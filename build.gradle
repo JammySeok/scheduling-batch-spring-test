@@ -30,6 +30,12 @@ dependencies {
     implementation 'net.javacrumbs.shedlock:shedlock-spring:7.10.1'
     implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:7.10.1'
 
+    // Spring Batch (메타데이터를 DB에 저장)
+    implementation 'org.springframework.boot:spring-boot-starter-batch-jdbc'
+
+    // PostgreSQL
+    runtimeOnly 'org.postgresql:postgresql'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

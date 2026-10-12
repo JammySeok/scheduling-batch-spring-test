@@ -1,4 +1,4 @@
-package jammy.schedulingbatchspringtest.job;
+package jammy.schedulingbatchspringtest.scheduler.job;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

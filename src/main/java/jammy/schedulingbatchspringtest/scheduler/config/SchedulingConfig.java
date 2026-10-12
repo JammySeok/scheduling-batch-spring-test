@@ -1,4 +1,4 @@
-package jammy.schedulingbatchspringtest.config;
+package jammy.schedulingbatchspringtest.scheduler.config;
 
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.provider.redis.spring.RedisLockProvider;
