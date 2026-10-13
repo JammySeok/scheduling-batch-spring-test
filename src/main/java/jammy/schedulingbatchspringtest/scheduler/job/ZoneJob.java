@@ -11,6 +11,8 @@ public class ZoneJob {
 
     /**
      * [3단계] cron 타임존(zone) 테스트
+     * - cron은 zone을 지정하지 않으면 JVM 기본 타임존 기준으로 해석됨
+     * - 로컬(KST)과 서버(UTC)처럼 타임존이 다를 때 실행 시각이 어떻게 달라지는지 확인
      *
      * 실행 방법
      * - application.yml의 zone-test.cron을 현재 한국 시간으로 맞추고 실행

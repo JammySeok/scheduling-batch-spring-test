@@ -19,8 +19,11 @@ public class ParameterJobConfig {
 
     /**
      * [2단계] JobParameters와 JobInstance
+     * - 같은 Job이라도 넘긴 파라미터에 따라 다른 작업(JobInstance)으로 구분됨
+     * - 같은 파라미터로 다시 실행하거나, 파라미터를 바꿔 실행했을 때의 동작 확인
      *
      * 실행 방법
+     * - application.yml의 spring.batch.job.enabled를 true로 변경
      * - application.yml의 spring.batch.job.name을 parameterJob으로 변경
      * - Program arguments에 파라미터를 바꿔 가며 실행
      *   - date=2026-10-11

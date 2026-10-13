@@ -20,6 +20,7 @@ spring:
   # 배치 설정
   batch:
     job:
+      enabled: false  # 앱 시작 시 Job 자동 실행 끔 (스케줄러가 실행 할 경우)
       name: skipRetryJob  # 시작 시 실행할 Job 설정 (Job 빈이 여러 개일 때)
     jdbc:
       initialize-schema: always  # 항상 테이블 생성 시도

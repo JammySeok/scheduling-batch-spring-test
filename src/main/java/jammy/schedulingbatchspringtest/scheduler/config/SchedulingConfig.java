@@ -19,9 +19,9 @@ public class SchedulingConfig {
      * - ShedLock이 내부에서 문자열로만 저장하므로 별도 직렬화 설정 불필요
      *
      * 저장 형식 (String 타입 + TTL)
-     * - Key   : job-lock:{environment}:{@SchedulerLock name}
+     * - Key: job-lock:{environment}:{@SchedulerLock name}
      *           ex) job-lock:scheduling-batch-spring-test:lockJob
-     * - Value : ADDED:{락 획득 시각(UTC)}@{호스트명}:{고유 ID}
+     * - Value: ADDED:{락 획득 시각(UTC)}@{호스트명}:{고유 ID}
      *           ex) ADDED:2026-10-08T15:58:10.015Z@DESKTOP-XXX:c6b9030b-...
      */
     @Bean

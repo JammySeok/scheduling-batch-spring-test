@@ -17,8 +17,11 @@ public class TaskletJobConfig {
 
     /**
      * [1단계] Tasklet Job 실행 + 배치 메타데이터 확인
+     * - 배치의 가장 단순한 형태(Job → Step → Tasklet)를 실행
+     * - 실행할 때마다 DB(batch_ 테이블)에 실행 이력이 남는지 확인
      *
      * 실행 방법
+     * - application.yml의 spring.batch.job.enabled를 true로 변경
      * - application.yml의 spring.batch.job.name을 taskletJob으로 변경 후 실행
      *
      * 결과

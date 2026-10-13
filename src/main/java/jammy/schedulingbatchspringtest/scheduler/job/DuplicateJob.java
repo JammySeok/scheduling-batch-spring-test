@@ -11,6 +11,8 @@ public class DuplicateJob {
 
     /**
      * [4단계] 멀티 인스턴스 중복 실행 재현
+     * - 스케줄러는 인스턴스(JVM)마다 따로 동작해, 서버를 여러 대 띄우면 같은 작업이 서버 수만큼 실행됨
+     * - 인스턴스 2개를 띄워 중복 실행을 재현
      *
      * 실행 방법
      * - Run/Debug Configurations → Modify options → Allow multiple instances 체크 후 2번 실행

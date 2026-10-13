@@ -11,6 +11,9 @@ public class BasicJob {
 
     /**
      * [1단계] 기본동작 테스트 (@Scheduled 주석을 하나씩 해제하며 테스트)
+     * - 정해진 주기나 시각에 메서드를 자동 실행하는 @Scheduled의 세 가지 방식 비교
+     * - fixedRate는 시작 기준, fixedDelay는 종료 기준이라 작업이 오래 걸릴 때 차이가 남
+     *
      * - fixedRateJob(): fixedRate 테스트
      * - fixedDelayJob(): fixedDelay 테스트
      * - cronJob(): cron 테스트

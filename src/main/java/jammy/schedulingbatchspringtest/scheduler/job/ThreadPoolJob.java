@@ -11,6 +11,8 @@ public class ThreadPoolJob {
 
     /**
      * [2단계] 스케줄러 스레드 풀 크기에 따른 작업 간 블로킹 테스트
+     * - 스케줄러 기본 스레드는 1개라, 한 작업이 오래 걸리면 다른 작업까지 밀림
+     * - 스레드 풀 크기를 늘리면 작업끼리 독립적으로 실행되는지 확인
      *
      * 실행 방법
      * - application.yml의 spring.task.scheduling.pool.size를 1, 2로 바꿔 가며 실행

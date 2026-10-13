@@ -29,30 +29,31 @@ docker compose up -d   # PostgreSQL, Redis 실행
 ---
 
 ### 학습 단계
+> 단계별 실행 방법과 결과는 각 클래스 주석에 정리
 
-#### 스케줄러
-| 단계 | 내용 |
-|---|---|
-| 1 | `@Scheduled` 기본 (fixedRate / fixedDelay / cron) |
-| 2 | 스케줄러 스레드 풀과 작업 간 블로킹 확인 |
-| 3 | 타임존(`zone`)과 cron 표현식 |
-| 4 | 인스턴스 2개 실행 → 중복 실행 문제 재현 |
-| 5 | 분산 락으로 중복 실행 방지 |
+#### 스케줄러 (`scheduler`)
+| 단계 | 내용 | 코드 |
+|---|---|---|
+| 1 | `@Scheduled` 기본 (fixedRate / fixedDelay / cron) | `BasicJob` |
+| 2 | 스케줄러 스레드 풀과 작업 간 블로킹 확인 | `ThreadPoolJob` |
+| 3 | 타임존(`zone`)과 cron 표현식 | `ZoneJob` |
+| 4 | 인스턴스 2개 실행 → 중복 실행 문제 재현 | `DuplicateJob` |
+| 5 | 분산 락으로 중복 실행 방지 | `LockJob` |
 
-#### 배치
-| 단계 | 내용 |
-|---|---|
-| 1 | DB 연결 + 배치 메타데이터 + Tasklet Job |
-| 2 | JobParameters와 JobInstance |
-| 3 | Chunk 처리 (Reader / Processor / Writer) |
-| 4 | 실패와 재시작 |
-| 5 | Skip / Retry |
+#### 배치 (`batch`)
+| 단계 | 내용 | 코드 |
+|---|---|---|
+| 1 | DB 연결 + 배치 메타데이터 + Tasklet Job | `TaskletJobConfig` |
+| 2 | JobParameters와 JobInstance | `ParameterJobConfig` |
+| 3 | Chunk 처리 (Reader / Processor / Writer) | `ChunkJobConfig` |
+| 4 | 실패와 재시작 | `RestartJobConfig` |
+| 5 | Skip / Retry | `SkipRetryJobConfig` |
 
-#### 스케줄러 + 배치
-| 단계 | 내용 |
-|---|---|
-| 1 | 스케줄러로 배치 Job 실행 |
-| 2 | 멀티 인스턴스에서 한 번만 실행 (분산 락 + JobInstance 중복 방지) |
+#### 스케줄러 + 배치 (`schedulerbatch`)
+| 단계 | 내용 | 코드 |
+|---|---|---|
+| 1 | 스케줄러로 배치 Job 실행 | `BatchLaunchScheduler` |
+| 2 | 멀티 인스턴스에서 한 번만 실행 (분산 락 + JobInstance 중복 방지) | `MultiInstanceBatchScheduler` |
 
 
 ---
@@ -141,60 +142,34 @@ Spring cron은 리눅스 crontab(5필드)과 달리 **초부터 시작하는 6�
 - ex) 매일 밤 정산, 오래된 데이터 정리, 대량 상태 변경, 파일 → DB 적재
 - 스케줄러는 **언제** 실행할지, 배치는 대량 데이터를 **어떻게** 처리할지 담당 → 보통 스케줄러가 배치 Job을 실행
 
-### 구조
-```
-Job
- ├─ Step ─ Tasklet (한 번에 끝나는 단순 작업)
- └─ Step ─ Chunk   (ItemReader → ItemProcessor → ItemWriter, N개마다 커밋)
-```
+### Job / Step
+- Job: 배치 작업 하나 (ex. 정산 배치)
+- Step: Job을 이루는 단계. 하나의 Job은 하나 이상의 Step을 순서대로 실행
+- Step의 처리 방식
+  - Tasklet: 한 번 실행하고 끝나는 단순 작업
+  - Chunk: 데이터를 N개씩 읽기 → 가공 → 쓰기를 반복하는 대량 처리
 
-### 실행 이력
-- 배치는 실행할 때마다 이력을 DB(`BATCH_*` 테이블)에 남김
-- **JobInstance = Job + 식별 JobParameters**
-  - 이미 성공한 인스턴스 → 재실행 거부 (`JobInstanceAlreadyCompleteException`)
-  - 실패한 인스턴스 → 재실행 시 마지막 커밋 지점부터 재시작
-  - 파라미터가 다르면 → 새 인스턴스로 처음부터 실행
-- 식별 / 비식별 파라미터
-  - 식별: JobInstance 구분에 사용 (기본값)
-  - 비식별: 기록만 하고 구분에는 안 씀 (`name=value,type,false`)
-  - ex) 처리 기준일 `date`는 식별, 요청 시각 `requestedAt`은 비식별
+### JobInstance / JobExecution
+- JobInstance: "어떤 작업"인지 구분하는 단위 = Job + 식별 파라미터
+  - ex) 정산 Job + date=10월 13일 → "10월 13일자 정산"
+- JobExecution: 그 작업을 실행한 시도 1회
+- 배치는 이 이력을 DB에 남겨, 끝난 작업은 다시 실행하지 않고 실패한 작업은 멈춘 지점부터 이어서 처리함
+
+### JobParameters
+- Job 실행 시 넘기는 값
+- 식별 파라미터: JobInstance를 구분하는 기준 (기본값)
+- 비식별 파라미터: 구분에는 쓰지 않고 기록만 함 (ex. 요청 시각, 요청자)
 
 ### 청크와 트랜잭션
-- 청크 하나 = 트랜잭션 하나 → 청크 크기만큼 처리할 때마다 커밋
-- 실패하면 **그 청크만 롤백**, 앞에서 커밋된 청크는 유지
-- 재시작 시 마지막 커밋 위치부터 이어서 처리 (Reader의 읽은 위치가 `ExecutionContext`에 저장됨)
+- 청크 하나 = 트랜잭션 하나 → 청크 단위로 커밋
+- 실패하면 그 청크만 롤백되고, 앞에서 커밋된 청크는 유지
 - 청크 크기가 크면 커밋 횟수는 줄지만, 실패 시 롤백되는 범위가 커짐
 
 ### Skip / Retry
-- 오류를 만나도 Step 전체를 실패시키지 않고 처리하는 방법
-- 어떤 오류가 일시적인지는 프레임워크가 판단하지 않음 → **예외 타입으로 직접 분류**
-
-| | Skip | Retry |
-|---|---|---|
-| 대상 | 다시 해도 실패하는 오류 (데이터 오류) | 다시 하면 성공할 수 있는 오류 (네트워크, 락 경합) |
-| 동작 | 그 건만 건너뜀 | 같은 건을 다시 시도 |
-| 한도 초과 | `skipLimit` 초과 시 Step 실패 | 재시도 소진 시 skip 정책으로 넘어감 |
-
-- `retryLimit` = 재시도 횟수 → **총 시도 = 1 + retryLimit**
-- 재시도를 다 쓴 예외가 skip 대상이 아니면 Step 실패
-  - "몇 번 재시도하고 안 되면 건너뛰기"는 같은 예외를 `retry`와 `skip`에 함께 등록
-- Skip 한도를 두는 이유: 오류가 많으면 데이터가 대량으로 깨졌거나 코드 버그일 가능성 → 조용히 넘기지 않고 중단
-
-### 메타데이터 테이블
-| 테이블 | 내용 |
-|---|---|
-| `BATCH_JOB_INSTANCE` | Job 이름 + 식별 파라미터 해시(`job_key`) |
-| `BATCH_JOB_EXECUTION` | Job 실행 시도별 상태, 시작/종료 시각 |
-| `BATCH_JOB_EXECUTION_PARAMS` | 실행 시 넘긴 파라미터 |
-| `BATCH_STEP_EXECUTION` | Step 실행별 상태와 처리 건수 |
-| `BATCH_JOB_EXECUTION_CONTEXT` / `BATCH_STEP_EXECUTION_CONTEXT` | 재시작용 상태 (Reader 위치 등) |
-
-- `BATCH_STEP_EXECUTION` 주요 건수
-  - `read_count`: 읽은 건수 (롤백된 청크에서 읽은 것도 포함)
-  - `filter_count`: Processor가 `null`을 반환해 제외한 건수
-  - `write_count`: 저장한 건수
-  - `process_skip_count`: Processor에서 건너뛴 건수
-  - `commit_count` / `rollback_count`: 청크 커밋 / 롤백 횟수
+- 오류가 나도 Step 전체를 실패시키지 않고 처리하는 방법
+- Skip: 다시 해도 실패하는 오류(데이터 오류)는 그 건만 건너뜀
+- Retry: 다시 하면 성공할 수 있는 오류(네트워크, 락 경합)는 같은 건을 다시 시도
+- 어떤 오류가 어느 쪽인지는 프레임워크가 판단하지 않음 → 예외 타입으로 직접 분류
 
 
 ## 코드 용어
@@ -202,7 +177,7 @@ Job
 - `Step`: Job 안의 독립적인 단계
 - `Tasklet`: Step을 메서드 하나 실행으로 처리하는 방식
   - `RepeatStatus.FINISHED`: 작업 종료 (`CONTINUABLE`이면 다시 호출)
-- `Chunk`: Step을 N개씩 읽기→가공→쓰기 반복으로 처리하는 방식
+- `Chunk`: Step을 N개씩 읽기 → 가공 → 쓰기 반복으로 처리하는 방식
   - `ItemReader`: 하나씩 읽음 (`null` 반환 시 종료)
   - `ItemProcessor`: 하나씩 가공 (`null` 반환 시 쓰기에서 제외)
   - `ItemWriter`: 청크 단위로 한 번에 씀
@@ -211,11 +186,21 @@ Job
 - `faultTolerant()`: Skip/Retry 기능을 켬
   - `skip` / `skipLimit`: 건너뛸 예외 / 최대 건너뛸 건수
   - `retry` / `retryLimit`: 재시도할 예외 / 최대 재시도 횟수
-- `JobParameters`: Job 실행 시 넘기는 값
+- `JobParameters` / `JobParametersBuilder`: Job 실행 시 넘기는 값 / 코드에서 생성
 - `JobExecution` / `StepExecution`: Job / Step의 실행 시도 1회
-- `ExecutionContext`: 재시작에 필요한 상태를 저장하는 공간
+- `ExecutionContext`: 재시작에 필요한 상태(Reader 위치 등)를 저장하는 공간
 - `JobRepository`: 실행 이력 저장소
 - `JobOperator`: Job 실행/중지/재시작 (Batch 6부터 `JobLauncher` 대체)
+
+
+## 메타데이터 테이블
+| 테이블 | 내용 |
+|---|---|
+| `BATCH_JOB_INSTANCE` | Job 이름 + 식별 파라미터 해시(`job_key`) |
+| `BATCH_JOB_EXECUTION` | Job 실행 시도별 상태, 시작/종료 시각 |
+| `BATCH_JOB_EXECUTION_PARAMS` | 실행 시 넘긴 파라미터 |
+| `BATCH_STEP_EXECUTION` | Step 실행별 상태와 처리 건수 (읽기/제외/쓰기/건너뜀/커밋/롤백) |
+| `BATCH_JOB_EXECUTION_CONTEXT` / `BATCH_STEP_EXECUTION_CONTEXT` | 재시작용 상태 |
 
 
 ---

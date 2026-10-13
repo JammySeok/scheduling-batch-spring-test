@@ -26,9 +26,12 @@ public class ChunkJobConfig {
 
     /**
      * [3단계] Chunk 처리 (Reader → Processor → Writer)
+     * - 대량 데이터를 한 번에 처리하지 않고, CHUNK_SIZE개씩 읽기 → 가공 → 쓰기를 반복
+     * - 주문(orders)을 읽어 정산(settlement)으로 저장하며, 청크 단위로 커밋되는지 확인
      *
      * 실행 방법
      * - orders(25건, 그중 5건 CANCELED), settlement 테이블 생성
+     * - application.yml의 spring.batch.job.enabled를 true로 변경
      * - application.yml의 spring.batch.job.name을 chunkJob으로 변경 후 실행
      *
      * 결과 (CHUNK_SIZE = 10 기준)

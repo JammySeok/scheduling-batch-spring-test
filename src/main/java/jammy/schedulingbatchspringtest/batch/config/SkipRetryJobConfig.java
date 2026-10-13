@@ -27,14 +27,16 @@ public class SkipRetryJobConfig {
 
     /**
      * [5단계] Skip / Retry
-     * - 오류가 발생해도 Step 전체를 실패시키지 않고 처리
+     * - 4단계처럼 한 건의 오류로 Step 전체가 실패하지 않도록, 오류 종류에 따라 건너뛰거나(Skip) 다시 시도(Retry)
+     * - 정상 처리, Skip 한도 초과, Retry 한도 초과 각각의 동작 확인
      *
      * 실행 방법
+     * - application.yml의 spring.batch.job.enabled를 true로 변경
      * - application.yml의 spring.batch.job.name을 skipRetryJob으로 변경
      * - application.yml의 batch-test 값을 실험별로 변경
-     *   - A. 기본           : skip-order-ids 3,13    / retry-fail-count 2
-     *   - B. Skip 한도 초과  : skip-order-ids 3,13,23 / retry-fail-count 2
-     *   - C. Retry 한도 초과 : skip-order-ids 3,13    / retry-fail-count 5
+     *   - (실험A) 기본: skip-order-ids 3,13 / retry-fail-count 2
+     *   - (실험B) Skip 한도 초과: skip-order-ids 3,13,23 / retry-fail-count 2
+     *   - (실험C) Retry 한도 초과: skip-order-ids 3,13 / retry-fail-count 5
      * - 실험마다 TRUNCATE settlement 후 date를 새 값으로 실행
      *
      * 결과
@@ -52,9 +54,9 @@ public class SkipRetryJobConfig {
      * - 결과 확인 (아래 SQL)
      *   - 정산 건수 → A 18 / B 14 / C 0
      *   - Step 실행 결과 (read / filter / write / skip / commit / rollback)
-     *     → A: 25 / 5 / 18 / 2 / 3 / 0
-     *     → B: 25 / 4 / 14 / 2 / 2 / 1
-     *     → C: 10 / 1 / 0 / 1 / 0 / 1
+     *     → 실험A: 25 / 5 / 18 / 2 / 3 / 0
+     *     → 실험B: 25 / 4 / 14 / 2 / 2 / 1
+     *     → 실험C: 10 / 1 / 0 / 1 / 0 / 1
      */
 /*
 [정산 건수 확인]

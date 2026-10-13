@@ -22,9 +22,11 @@ public class RestartJobConfig {
 
     /**
      * [4단계] 실패와 재시작
-     * - Batch 작업 중 실패했을 때와, 재시작 했을 상황 확인
+     * - 배치는 처리 도중 실패할 수 있음 (데이터 오류, DB 장애 등)
+     * - 실패했을 때 어디까지 저장되는지, 같은 파라미터로 다시 실행하면 어디서부터 이어지는지 확인
      *
      * 실행 방법
+     * - application.yml의 spring.batch.job.enabled를 true로 변경
      * - application.yml의 spring.batch.job.name을 restartJob으로 변경
      * - (SQL) TRUNCATE settlement; 후 실행
      * - 1차: batch-test.fail-order-id = 15 로 실행 (15번 주문에서 예외 발생)
@@ -63,7 +65,7 @@ ORDER BY e.job_execution_id;
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
             JdbcCursorItemReader<Order> orderReader,  // 3단계(ChunkJobConfig) Reader 재사용
-            ItemProcessor<Order, Settlement> failingProcessor,  // 같은 타입 빈이 2개라 파라미터 이름으로 구분
+            ItemProcessor<Order, Settlement> failingProcessor,  // 같은 타입 빈이 여러 개라 파라미터 이름으로 구분
             ItemWriter<Settlement> settlementWriter  // 3단계(ChunkJobConfig) Writer 재사용
     ) {
         return new StepBuilder("restartStep", jobRepository)
